@@ -1,0 +1,601 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "690314db-4fcb-4ab9-968b-927a7f72ef04",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -896,
+        -176
+      ],
+      "id": "7e7f707c-dc09-417c-b9d4-53b1ceb736fc",
+      "name": "Webhook",
+      "webhookId": "690314db-4fcb-4ab9-968b-927a7f72ef04"
+    },
+    {
+      "parameters": {
+        "tableId": "capi_conv_test",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $json.body.receivedAt }}"
+            },
+            {
+              "fieldId": "body_text",
+              "fieldValue": "={{ $json.body.payload.entry[0].changes[0].value.messages[0].text.body }}"
+            },
+            {
+              "fieldId": "nomor",
+              "fieldValue": "={{ $json.body.payload.entry[0].changes[0].value.contacts[0].wa_id }}"
+            },
+            {
+              "fieldId": "clid_ctwa",
+              "fieldValue": "={{ $json.body.payload.entry[0].changes[0].value.messages[0].referral.ctwa_clid }}"
+            },
+            {
+              "fieldId": "direction",
+              "fieldValue": "={{ $json.body.payload.entry[0].changes[0].value.messages[0].from }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "pending"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        -304
+      ],
+      "id": "5c9a0e45-0e56-4862-b7b9-f0017ee6fc35",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "SUPABASE_TOKEN",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -304,
+        -304
+      ],
+      "id": "7653a72d-bf3a-403e-a2a4-d5aad0d7b193",
+      "name": "Wait",
+      "webhookId": "3ed86169-dfc3-42d1-9110-7c18d0af6db6"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d906b9ae-9e2a-4b3b-8860-53d4ec11590a",
+              "leftValue": "={{ $now.diff(DateTime.fromISO($json.created_at), 'seconds').seconds }}",
+              "rightValue": 30,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        32,
+        -304
+      ],
+      "id": "5d6c9e13-6065-42d4-abef-d182c48338d8",
+      "name": "If"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        240,
+        -240
+      ],
+      "id": "ea0c2c51-332a-46fb-a800-1264fe6e8e1f",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "capi_conv_test",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "created_at",
+              "condition": "gte",
+              "keyValue": "={{ new Date(Date.now() - (24 * 60 * 60 * 1000)).toISOString() }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        240,
+        -400
+      ],
+      "id": "2f801511-4361-4621-aff2-47665b275a01",
+      "name": "Get many rows1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "SUPABASE_TOKEN",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "capi_conv_test",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "gte",
+              "keyValue": "={{ $('Create a row').item.json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        -304
+      ],
+      "id": "a3b8b1f6-829d-48dc-8f1f-00fae543e2cc",
+      "name": "Get many rows",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "SUPABASE_TOKEN",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nreturn [{\n  json:{\n    data: $input.all()\n    .filter(item => {\n      const isPending = item.json.status === 'pending';\n      const hasClickId = item.json.clid_ctwa && item.json.clid_ctwa !== '';\n      return isPending && hasClickId;\n    })\n    .map(item => { \n      return {\n          // Tuliskan HANYA field yang Anda butuhkan untuk Anthropic\n          id_click: item.json.clid_ctwa,\n          phone_number: item.json.nomor,\n          time: item.json.created_at,\n          chat_text: item.json.body_text\n      };\n    })\n  }\n}] "
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        -400
+      ],
+      "id": "b6443aab-adf6-4c25-a659-c1f09ef37629",
+      "name": "Code: Select Specific Field"
+    },
+    {
+      "parameters": {
+        "jsCode": "// KONFIGURASI NAMA FIELD\nconst FIELD_NOMOR = 'nomor'; \nconst FIELD_CLICK_ID = 'clid_ctwa'; // Sesuaikan dengan kolom di Supabase\n\n// 1. Buat kamus (Map) untuk referensi ID (Logika Backfill)\nconst idReference = {};\n\n// PASS 1: Kumpulkan semua Click ID yang tersedia\nfor (const item of $input.all()) {\n  const nomor = item.json[FIELD_NOMOR];\n  const clickId = item.json[FIELD_CLICK_ID];\n\n  // Jika item ini punya click_id, simpan ke referensi\n  if (clickId && clickId !== '' && clickId !== null) {\n    idReference[nomor] = clickId;\n  }\n}\n\n// PASS 2: Proses data & Isi yang kosong (Backfill)\n// Kita gunakan .map() untuk menghasilkan array object bersih\nconst processedItems = $input.all().map(item => {\n  const rowData = item.json;\n  const nomor = rowData[FIELD_NOMOR];\n  \n  // Cek apakah click_id kosong?\n  if (!rowData[FIELD_CLICK_ID]) {\n    // Jika kosong, contek dari referensi\n    if (idReference[nomor]) {\n      rowData[FIELD_CLICK_ID] = idReference[nomor];\n    }\n  }\n  \n  return rowData;\n});\n\n// --- BAGIAN PENTING (MENCEGAH LOOPING) ---\n// Kita kembalikan array yang HANYA berisi 1 item.\n// Item tersebut memiliki properti \"data\" yang menampung seluruh baris tadi.\nreturn processedItems"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        -400
+      ],
+      "id": "53979d2c-3ddc-4a65-8a0e-9c5223998195",
+      "name": "Code: Fill the click_id"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawContent = $input.first().json.content[0].text;\n\nconst match = rawContent.match(/<final_output>([\\s\\S]*?)<\\/final_output>/);\n\nif (match && match[1]) {\n  const jsonString = match[1].trim();\n  \n  try {\n    const parsedData = JSON.parse(jsonString);\n    return parsedData.map(item => ({\n      json: item\n    }));\n    \n  } catch (error) {\n    throw new Error(\"Gagal parsing JSON dari AI. Cek format outputnya.\");\n  }\n} else {\n  return [\n    {\n      json: {\n        error: \"Tag <final_output> tidak ditemukan dalam respons AI.\",\n        raw_response: rawContent\n      }\n    }\n  ];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        -400
+      ],
+      "id": "b5e83c52-623f-499d-a9a2-0e00010c3775",
+      "name": "Code: Covert the Output into JSON"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Map untuk menyimpan data unik sementara\nconst uniqueData = {};\n\n// Loop semua item yang masuk\nfor (const item of $input.all()) {\n  const json = item.json;\n  \n  // 1. Buat \"Key Unik\" berdasarkan kriteria duplikasi Anda\n  // Kita gabungkan nomor + click_id + label menjadi satu string unik\n  const uniqueKey = `${json.phone_number}_${json.click_id}_${json.label}`;\n  \n  // 2. Cek apakah key ini sudah ada di simpanan kita?\n  if (!uniqueData[uniqueKey]) {\n    // A. Jika belum ada, simpan item ini langsung\n    uniqueData[uniqueKey] = item;\n    \n  } else {\n    // B. Jika SUDAH ada (Duplikat!), kita harus adu waktunya\n    const existingTime = new Date(uniqueData[uniqueKey].json.time).getTime();\n    const newTime = new Date(json.time).getTime();\n    \n    // Jika waktu item baru LEBIH BESAR (lebih baru) dari yang lama...\n    if (newTime > existingTime) {\n      // ...maka timpa data lama dengan data baru (Update to Max Time)\n      uniqueData[uniqueKey] = item;\n    }\n    // Jika lebih kecil (lebih lama), abaikan saja.\n  }\n}\n\n// 3. Kembalikan semua nilai yang tersisa di Map (data unik terpilih)\nreturn Object.values(uniqueData);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1152,
+        -400
+      ],
+      "id": "771504bf-c3f9-4dbb-91aa-0880e8c53bb1",
+      "name": "Code: Deduplicate the List Output"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "x-api-key",
+              "value": "ANTHROPIC_KEY_ACCESS_TOKEN"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-5-20250929\",\n  \"max_tokens\": 2014,\n  \"temperature\": 1,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": [\n        {\n          \"type\": \"text\",\n          \"text\": \"You are tasked with analyzing customer chat conversation data and classifying messages into stages of the customer journey. The chat data is primarily in Indonesian language. \\n\\nHere is the JSON-formatted data you need to analyze:\\n\\n<json_data>\\n{{ JSON.stringify($json.data).replace(/\\\"/g, '\\\\\\\"') }}\\n</json_data>\\n\\nThe JSON contains an array of message records with these fields:\\n- **id_click**: A click identifier (may be empty for some rows)\\n- **time**: Timestamp of the chat message (ISO 8601 format)\\n- **phone_number**: Customer's phone number\\n- **chat_text**: The actual text content of the chat message (primarily in Indonesian)\\n\\n## Data Processing Instructions\\n\\nFollow these steps to process and classify the data:\\n\\n### Step 1: Group Messages by Phone Number\\nGroup all messages that share the same phone_number. All messages from the same phone number represent that customer's conversation history.\\n\\n### Step 2: Combine Related Consecutive Messages (IMPORTANT)\\nThis is a critical step that addresses fragmented messages:\\n\\n- Customers often send their thoughts across multiple consecutive messages rather than in a single message\\n- For example: \\\"Halo\\\" (first message), then \\\"Saya dapat iklan dari instagram\\\" (second message), then \\\"saya mau bertanya lebih lanjut\\\" (third message)\\n- When examining each message, look ahead at the next 2-3 messages from the same phone number within the same session\\n- If these consecutive messages appear to be part of the same thought, question, or statement, combine them into a single semantic unit\\n- When you combine messages, use the timestamp of the LATEST message in the group as the time for the combined unit\\n- Only after combining related messages should you proceed to classification\\n- Do not include if the message from user is out of context\\n\\n### Step 3: Classify Each Message or Combined Message Unit\\nSkip if the combined message unit don't have click_id\\nClassify each chat message (or combined message unit) using exactly one of these three labels:\\n\\n**awareness**: The customer is opening or initiating a conversation. Look for:\\n- Greetings or introductions\\n- Initial inquiries that don't yet show specific interest in product details\\n- General statements about seeing an advertisement\\n- Opening a conversation without specific questions\\n\\n**interest**: The customer wants to learn more about the product. Look for:\\n- Questions about functions, features, or capabilities\\n- Questions about how the product works\\n- Questions about what the product can do\\n- Requests for more information about product specifications\\n- Questions about use cases or applications\\n\\n**consider**: The customer is showing purchase intent or readiness to transact. Look for:\\n- Questions about pricing or costs\\n- Questions about questions about promotions, discounts, or special offers\\n- Questions about payment options or methods\\n- Questions about availability or when they can start\\n- Questions about packages or plans\\n- Questions about the purchasing process\\n\\n## Your Task\\n\\n1. **List all messages**: Write out each message with its timestamp and text content\\n2. **Identify messages to combine**: Within each session, examine consecutive messages:\\n   - Quote 2-3 consecutive messages at a time\\n   - Explain whether they form a single thought/question or are separate\\n   - If combining, note which timestamp (the latest one) will be used\\n   - List the final combined message units\\n3. **Classify each unit**: For each message or combined message unit:\\n   - Quote the relevant text in Indonesian\\n   - For \\\"awareness\\\": identify and quote specific text snippets that suggest conversation opening/initiation\\n   - For \\\"interest\\\": identify and quote specific text snippets that suggest product information requests\\n   - For \\\"consider\\\": identify and quote specific text snippets that suggest purchase intent\\n   - Make your final classification decision with justification\\n\\nAfter your analysis, provide your classifications in <final_output> tags as a JSON array with exactly these fields for each classified message:\\n- **phone_number**: The customer's phone number\\n- **click_id**: The click identifier from the id_click field\\n- **time**: The timestamp (use the latest timestamp if messages were combined)\\n- **message**: The text from message or combined message\\n- **label**: One of: \\\"awareness\\\", \\\"interest\\\", or \\\"consider\\\"\\n\\n## Output Format Example\\n\\nImportant! You DON'T have to explain the step by step analysis, <final_output> is enough.\\nYour final output should look like this (this is structure only, not real data):\\n\\n<final_output>\\n[\\n  {\\n    \\\"phone_number\\\": \\\"6281234567890\\\",\\n    \\\"click_id\\\": \\\"abc123xyz\\\",\\n    \\\"time\\\": \\\"2025-01-15T14:30:00.000+00:00\\\",\\n    \\\"message\\\": \\\"Halo, saya tertarik beriklan dengan kuponku\\\",\\n    \\\"label\\\": \\\"awareness\\\"\\n  },\\n  {\\n    \\\"phone_number\\\": \\\"6281234567890\\\",\\n    \\\"click_id\\\": \\\"abc123xyz\\\",\\n    \\\"time\\\": \\\"2025-01-15T15:45:00.000+00:00\\\",\\n    \\\"message\\\": \\\"Saya mau tahu info lebih lanjut terkait kuponku\\\",\\n    \\\"label\\\": \\\"interest\\\"\\n  },\\n  {\\n    \\\"phone_number\\\": \\\"6289876543210\\\",\\n    \\\"click_id\\\": \\\"def456uvw\\\",\\n    \\\"time\\\": \\\"2025-01-16T09:20:00.000+00:00\\\",\\n    \\\"message\\\": \\\"Apakah untuk bisnis FnB ini bagus?\\\",\\n    \\\"label\\\": \\\"consider\\\"\\n  }\\n]\\n</final_output>\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        768,
+        -400
+      ],
+      "id": "6a0342a7-07f9-4558-a643-8005ec5ec6a6",
+      "name": "Anthropic: Classify the Chat",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "capi_conv_test",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "pending"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "completed"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        -400
+      ],
+      "id": "0c744772-4152-46e7-a53c-f2c886713eff",
+      "name": "Update a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "SUPABASE_TOKEN",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v16.0/4196782273942233/events",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "USER_ACCESS_TOKEN_META_DEVELOPER"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"data\": [\n    {\n      \"event_name\": \"{{ $json.label === 'awareness' ? 'ViewContent' : $json.label === 'interest' ? 'LeadSubmitted' : $json.label === 'consider' ? 'InitiateCheckout' : 'QualifiedLead' }}\",\n      \"event_time\": {{ Math.floor(new Date($json.time).getTime() / 1000) }},\n      \"action_source\": \"business_messaging\",\n      \"messaging_channel\": \"whatsapp\",\n      \"user_data\": {\n        \"whatsapp_business_account_id\": \"1390344685665525\",\n        \"ctwa_clid\": \"{{ $json.click_id }}\"\n      }\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1328,
+        -400
+      ],
+      "id": "ecc15b0f-d371-498e-be8c-6e17a760e5df",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2ef5926b-f09e-4b11-b5da-da55f514c36c",
+              "leftValue": "={{ $json.body.payload.entry[0].changes[0].value.messages[0].referral.ctwa_clid }}",
+              "rightValue": "2",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -688,
+        -176
+      ],
+      "id": "d8ff393f-d2d5-402e-aefc-e7e9b10a8aaa",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v16.0/{DATASET_ID}/events?access_token={TOKEN}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"data\": [\n    {\n      \"event_name\": \"QualifiedLead\",\n      \"event_time\": {{ Math.floor(new Date($json.time).getTime() / 1000) }},\n      \"action_source\": \"business_messaging\",\n      \"messaging_channel\": \"whatsapp\",\n      \"user_data\": {\n        \"whatsapp_business_account_id\": WABA ID,\n        \"ctwa_clid\": \"{{ $json.click_id }}\",\n      }\n    }\n  ],\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -240,
+        -64
+      ],
+      "id": "11117ae0-edf6-4853-bc91-8bb9b7809a9a",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9fc70321-2a25-4767-bee4-f7e59cbcea88",
+              "leftValue": "flow_submit",
+              "rightValue": "flow_submit",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -480,
+        -80
+      ],
+      "id": "60b0920f-2dd1-40a2-9cf6-2e8ea43310de",
+      "name": "If2"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get many rows1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows1": {
+      "main": [
+        [
+          {
+            "node": "Code: Fill the click_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Select Specific Field": {
+      "main": [
+        [
+          {
+            "node": "Anthropic: Classify the Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Fill the click_id": {
+      "main": [
+        [
+          {
+            "node": "Code: Select Specific Field",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Covert the Output into JSON": {
+      "main": [
+        [
+          {
+            "node": "Code: Deduplicate the List Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Deduplicate the List Output": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic: Classify the Chat": {
+      "main": [
+        [
+          {
+            "node": "Code: Covert the Output into JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [],
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c0d6786147bb2cda69ee9189d41dda4ec6a201926901b7ae2db3ad7acf288fed"
+  }
+}
